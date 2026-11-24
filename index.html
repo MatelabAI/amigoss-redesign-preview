@@ -765,6 +765,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   try { saved = localStorage.getItem("amigoss-lang"); } catch (e) {}
   if (saved === "es") setLang("es");
 
+  /* ---------- Back to the very top (the header is sticky, so #top alone does not scroll) ---------- */
+  document.querySelectorAll('a[href="#top"]').forEach(function(a){
+    a.addEventListener("click", function(e){
+      e.preventDefault();
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (err) {}
+    });
+  });
+
   /* ---------- Header ---------- */
   var header = document.querySelector(".site-header");
   function onScroll(){ header.classList.toggle("scrolled", window.scrollY > 8); }
