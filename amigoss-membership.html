@@ -173,6 +173,23 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .idea{display:grid;gap:10px;justify-items:start;width:100%;margin-top:14px;padding:22px 24px;border:1.5px dashed var(--red);border-radius:14px}
 .idea p{color:var(--ink-soft)}
 .stubs-wrap{display:grid;gap:16px;min-width:0}
+.upcoming{display:grid;gap:14px;margin-bottom:18px}
+.event-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.event{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:16px;padding:12px 14px 12px 12px;background:var(--paper);border:1px solid var(--line);border-radius:10px}
+.event-date{display:grid;place-items:center;gap:2px;height:64px;border-radius:8px;background:var(--red);color:#fff}
+.event-day{font-family:var(--font-display);font-size:1.7rem;line-height:1}
+.event-mon{font-family:var(--font-mono);font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase}
+.event-body{display:grid;gap:4px;min-width:0}
+.event-title{font-family:var(--font-display);font-size:1.25rem;line-height:1.2;color:var(--ink);overflow-wrap:anywhere}
+.event-meta{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.06em;color:var(--ink-soft)}
+.event-cta{font:600 .74rem/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--red);text-decoration:none;border:1.5px solid var(--red);border-radius:999px;padding:.6em .9em;white-space:nowrap}
+.event-cta:hover{background:var(--red);color:#fff}
+.live-note{display:flex;align-items:center;gap:8px;margin:0;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.08em;color:var(--ink-soft)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#2E9E5B;box-shadow:0 0 0 3px rgba(46,158,91,.18)}
+.site-notice{background:var(--ink);color:#fff;font-size:.92rem}
+.site-notice .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
+.site-notice .icon{flex:none;width:18px;height:18px}
+@media (max-width:520px){.event{grid-template-columns:56px minmax(0,1fr)}.event-date{height:56px}.event-cta{grid-column:2;justify-self:start}}
 .stubs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .stub{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 46px;min-height:100px;background:var(--blush);border-radius:10px;overflow:hidden;transition:transform .2s ease}
 .stub:hover{transform:rotate(-1.2deg) translateY(-2px)}
@@ -392,6 +409,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     </button>
   </div>
 </header>
+<div class="site-notice" id="site-notice" role="status" hidden><div class="wrap"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span id="site-notice-text"></span></div></div>
 
 <main>
   <section class="join-hero" aria-labelledby="m-title">
@@ -572,6 +590,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
   /* ---------- Language ---------- */
   var ES = {
+    "events.next":"Próximos eventos","events.live":"En vivo desde el Google Sheet de Amigoss","ev.free":"Gratis","ev.tickets":"Entradas",
     "nav.about":"Nosotros","nav.benefits":"Ventajas","nav.events":"Eventos","nav.contact":"Contacto","nav.join":"Hazte socio","nav.menu":"Menú",
     "hero.eyebrow":"Comunidades hispanohablantes de Sídney · Desde 1978",
     "hero.title":"Siéntete en casa, <span class=\"hl\">en español.</span>",
@@ -648,7 +667,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     "m.help":"¿Dudas? Llama al (02) 9660 8157 o escribe a admin@amigoss.org, de lunes a viernes de 10:00 a 16:00."
   };
   var EN = {
-    "copied":"Copied","selected":"Selected",
+    "copied":"Copied","selected":"Selected","ev.free":"Free","ev.tickets":"Tickets",
     "form.ok":"Thanks, {name}. This is a design preview, so nothing was sent. On the live site your message goes to admin@amigoss.org.",
     "form.missing":"Fill in the fields marked * to send your message.",
     "m.ok":"Thanks, {name}. Your application is ready. Next, pay the $15 annual fee by bank transfer or in cash at our office, and the Board will confirm your membership. This is a preview, so nothing was sent."
@@ -657,6 +676,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   nodes.forEach(function(n){ var k = n.getAttribute("data-i18n"); if (!(k in EN)) EN[k] = n.innerHTML; });
 
   var lang = "en";
+  var langHooks = [];
   function t(key){ var d = lang === "es" ? ES : EN; return d[key] != null ? d[key] : EN[key]; }
   function setLang(next){
     lang = next === "es" ? "es" : "en";
@@ -664,6 +684,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
     document.documentElement.lang = lang;
     document.querySelectorAll("[data-lang]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang)); });
     try { localStorage.setItem("amigoss-lang", lang); } catch (e) {}
+    langHooks.forEach(function(fn){ fn(); });
   }
   document.querySelectorAll("[data-lang]").forEach(function(b){
     b.addEventListener("click", function(){ setLang(b.getAttribute("data-lang")); });
@@ -671,6 +692,124 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   var saved = null;
   try { saved = localStorage.getItem("amigoss-lang"); } catch (e) {}
   if (saved === "es") setLang("es");
+
+  /* ---------- Content from the Amigoss Google Sheet (events, fee, hours, notice) ---------- */
+  (function(){
+    var SHEET_ID = "1q4-OzdmQmxIw0JyKqGKItAoHUp6dJDi3p8TY1mF3lHA";
+    var BASE_EN = Object.assign({}, EN), BASE_ES = Object.assign({}, ES);
+    var settings = {}, events = [];
+    var MONTHS = {
+      en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+      es:["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+    };
+    function url(tab){ return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(tab) + "&_=" + Date.now(); }
+    function parseCSV(text){
+      var rows = [], row = [], cell = "", q = false;
+      for (var i = 0; i < text.length; i++){
+        var c = text[i];
+        if (q){ if (c === '"'){ if (text[i+1] === '"'){ cell += '"'; i++; } else q = false; } else cell += c; }
+        else if (c === '"') q = true;
+        else if (c === ","){ row.push(cell); cell = ""; }
+        else if (c === "\n"){ row.push(cell); rows.push(row); row = []; cell = ""; }
+        else if (c !== "\r") cell += c;
+      }
+      if (cell !== "" || row.length){ row.push(cell); rows.push(row); }
+      return rows;
+    }
+    function norm(s){ return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
+    function get(prefix){
+      for (var k in settings){ if (k.indexOf(prefix) === 0) return settings[k]; }
+      return "";
+    }
+    function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+    function low(s){ return s.charAt(0).toLowerCase() + s.slice(1); }
+
+    function applySettings(){
+      // Always rebuild from the original texts, so changing a value twice works.
+      Object.keys(BASE_EN).forEach(function(k){ EN[k] = BASE_EN[k]; });
+      Object.keys(BASE_ES).forEach(function(k){ ES[k] = BASE_ES[k]; });
+      var fee = get("cuota").replace(/[^0-9.]/g, "");
+      if (/^\d+(\.\d{1,2})?$/.test(fee)){
+        [EN, ES].forEach(function(d){ Object.keys(d).forEach(function(k){ if (typeof d[k] === "string") d[k] = d[k].replace(/\$15(?![0-9])/g, "$" + fee); }); });
+        document.querySelectorAll(".fee-amount").forEach(function(el){ el.textContent = "$" + fee; });
+      }
+      var hEn = get("horario (ingl").trim(), hEs = get("horario (esp").trim();
+      if (hEn){
+        EN["hero.hours"] = "Open " + hEn; EN["glance.hours"] = cap(hEn); EN["contact.hoursV"] = cap(hEn);
+        EN["b4.d"] = "Our rooms are open " + hEn + ", for meetings, TV, reading and cards, with free Wi-Fi and free tea, coffee and biscuits.";
+        EN["join.cash"] = "Prefer cash? Pay at our office in Glebe, " + hEn + ".";
+        EN["m.help"] = "Questions? Call (02) 9660 8157 or email admin@amigoss.org, " + hEn + ".";
+      }
+      if (hEs){
+        var l = low(hEs);
+        ES["hero.hours"] = "Abierto " + l; ES["glance.hours"] = cap(l); ES["contact.hoursV"] = cap(l);
+        ES["b4.d"] = "Nuestro local abre " + l + ", para reuniones, televisión, lectura y cartas, con wifi gratis y té, café y galletas gratis.";
+        ES["join.cash"] = "¿Prefieres efectivo? Paga en nuestra oficina de Glebe, " + l + ".";
+        ES["m.help"] = "¿Dudas? Llama al (02) 9660 8157 o escribe a admin@amigoss.org, " + l + ".";
+      }
+      setLang(lang);
+    }
+
+    function renderNotice(){
+      var box = document.getElementById("site-notice"); if (!box) return;
+      var text = (lang === "es" ? get("aviso (esp") : get("aviso (ingl")).trim();
+      document.getElementById("site-notice-text").textContent = text;
+      box.hidden = !text;
+    }
+
+    function parseDate(s){
+      var m = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(s || "");
+      if (!m) return null;
+      var d = new Date(+m[3], +m[2] - 1, +m[1]);
+      return d.getMonth() === +m[2] - 1 ? d : null;
+    }
+    function el(tag, cls, text){ var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+    function renderEvents(){
+      var wrap = document.getElementById("upcoming"), list = document.getElementById("event-list");
+      if (!wrap || !list) return;
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var upcoming = events.filter(function(e){ return e.date && e.date >= today && (e.en || e.es); })
+                           .sort(function(a, b){ return a.date - b.date; }).slice(0, 4);
+      list.textContent = "";
+      upcoming.forEach(function(e){
+        var li = el("li", "event");
+        var date = el("div", "event-date");
+        date.appendChild(el("span", "event-day", String(e.date.getDate())));
+        date.appendChild(el("span", "event-mon", MONTHS[lang][e.date.getMonth()]));
+        var body = el("div", "event-body");
+        body.appendChild(el("span", "event-title", (lang === "es" ? e.es : e.en) || e.en || e.es));
+        var price = /^\d+(\.\d{1,2})?$/.test(e.price) ? "$" + e.price : t("ev.free");
+        body.appendChild(el("span", "event-meta", [e.time, e.place, price].filter(Boolean).join(" · ")));
+        li.appendChild(date); li.appendChild(body);
+        if (/^https:\/\/\S+$/.test(e.link)){
+          var a = el("a", "event-cta", t("ev.tickets"));
+          a.href = e.link; a.target = "_blank"; a.rel = "noopener";
+          li.appendChild(a);
+        }
+        list.appendChild(li);
+      });
+      wrap.hidden = upcoming.length === 0;
+    }
+
+    langHooks.push(renderEvents, renderNotice);
+
+    function load(tab){ return fetch(url(tab), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); }).then(parseCSV); }
+    load("Ajustes").then(function(rows){
+      settings = {};
+      rows.slice(1).forEach(function(r){ if (r[0]) settings[norm(r[0])] = r[1] || ""; });
+      applySettings(); renderNotice();
+    }).catch(function(){ /* keep the texts built into the page */ });
+    if (document.getElementById("event-list")){
+      load("Eventos").then(function(rows){
+        events = rows.slice(1).map(function(r){
+          return { date: parseDate(r[0]), time: (r[1] || "").trim(), en: (r[2] || "").trim(), es: (r[3] || "").trim(),
+                   place: (r[4] || "").trim(), price: (r[5] || "").replace(/[$\s]/g, ""), link: (r[6] || "").trim() };
+        });
+        renderEvents();
+      }).catch(function(){ /* no events block if the Sheet cannot be read */ });
+    }
+  })();
 
   /* ---------- Back to the very top (the header is sticky, so #top alone does not scroll) ---------- */
   document.querySelectorAll('a[href="#top"]').forEach(function(a){
